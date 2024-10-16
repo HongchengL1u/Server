@@ -1,8 +1,10 @@
-#include"ThreadPool.h"
+#include "ThreadPool.h"
 #include <unistd.h>
+#include <iostream>
+#include <string>
 void taskFunc(void* arg){
     int num = *static_cast<int*>(arg);
-    cout<<"thread"<<to_string(pthread_self())<<"working,number="<<num<<endl;
+    std::cout<<"thread"<<std::to_string(pthread_self())<<"working,number="<<num<<std::endl;
     sleep(0.1);
 }
 

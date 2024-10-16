@@ -1,35 +1,38 @@
+#ifndef SERVER_THREADPOOL_THREADPOOL_H
+#define SERVER_THREADPOOL_THREADPOOL_H
 #include <iostream>
 #include <thread>
 #include <mutex>
 #include <shared_mutex>
 #include <condition_variable>
-#include <queue>
+#include <deque>
 #include <functional>
 #include <future>
-using namespace std;
-
+#include "util/alluse.h"
 template <typename T>
-class ThreadSafeQueue
+class ThreadSafeDeque // 不怎么好用
 {
     public:
-        void push(T& x)
+        void push_back(T& x)
         {
             std::unique_lock<std::shared_mutex> lk(m);
-            q.push(x);
+            q.push_back(x);
         }
-        bool pop(T& el)
+        bool pop_front(T& el)
         {
+            // unique_lock 管理写锁
             std::unique_lock<std::shared_mutex> lk(m);
             if(q.empty())
             {
                 return false;
             }
             el = q.front();
-            q.pop();
+            q.pop_front();
             return true;
         }
         int size()
         {
+            // shared_lock 管理读锁
             std::shared_lock<std::shared_mutex> lk(m);
             return q.size();
         }
@@ -40,16 +43,16 @@ class ThreadSafeQueue
         }
 
     private:
-        std::queue<T> q;
+        std::deque<T> q;
         std::shared_mutex m;
-
+        std::condition_variable cv_;
 };
 
 
 class ThreadPool
 {
     private:
-        ThreadSafeQueue<std::function<void()>> tasks_;
+        std::deque<std::function<void()>> tasks_;
         std::vector<std::thread> threads_;
         bool stop_ = false;
         std::mutex m_;
@@ -64,14 +67,19 @@ class ThreadPool
                         while(true)
                         {
                             std::function<void()> task;
-                            std::unique_lock<std::mutex> lock(m_);
-                            cv_.wait(lock,[this](){return (stop_ || !tasks_.empty());});
-                            if(tasks_.empty())
                             {
-                                break;
+                                std::unique_lock<std::mutex> lock(m_);
+                                cv_.wait(lock,[this](){return (stop_ || !tasks_.empty());});
+                                if(tasks_.empty())
+                                {
+                                    break;
+                                }
+                                task = tasks_.front();
+                                tasks_.pop_front();
+                                // if(!tasks_.pop_front(task)) continue;
                             }
-                            tasks_.pop(task);
                             task();
+                            LOG(INFO) << "one task done!";
                         }
                 }));
             }
@@ -89,6 +97,11 @@ class ThreadPool
             }
 
         }
+        void addfunc(std::function<void()>& func)
+        {
+            tasks_.push_back(func);
+            cv_.notify_one();
+        }
         template<typename F, typename ... Args>
         auto add(F&& f, Args&& ... args) -> std::future<decltype(f(args...))>
         {
@@ -97,9 +110,12 @@ class ThreadPool
 		    };
             auto task_ptr = std::make_shared<std::packaged_task<decltype(f(args ...))()>>(func);
             std::function<void()> wrapper = [task_ptr]() {(*task_ptr)();};
-            tasks_.push(wrapper);
+            tasks_.push_back(wrapper);
             cv_.notify_one();
             return task_ptr->get_future();
         }
 
 };
+
+
+#endif
