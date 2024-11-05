@@ -34,7 +34,7 @@ class Socket
             // man 2 shutdown
             // 使用close中止一个连接，但它只是减少描述符的参考数，并不直接关闭连接，只有当描述符的参考数为0时才关闭连接。
             // shutdown可直接关闭描述符，不考虑描述符的参考数，可选择中止一个方向的连接。
-            LOG(INFO) << "Socket free! fd: " << fd;
+            LOG_INFO << "Socket free! fd: " << fd;
             close(fd);
             fd = -1;
         }
@@ -55,7 +55,7 @@ class Socket
             fd = socket(AF_INET, SOCK_STREAM, 0);
             if(fd == -1)
             {
-                LOG(ERROR) << "socket create fail!";
+                LOG_ERROR << "socket create fail!";
                 return false;
             } 
             return true;
@@ -64,7 +64,7 @@ class Socket
         {
             if(_fd == -1)
             {
-                LOG(ERROR) << "Socket init fail!";
+                LOG_ERROR << "Socket init fail!";
                 return false;
             }
             type = TYPE::CLIENT;
@@ -77,7 +77,7 @@ class Socket
             fd = socket(AF_INET, SOCK_STREAM, 0);
             if(fd == -1)
             {
-                LOG(ERROR) << "socket create fail!";
+                LOG_ERROR << "socket create fail!";
                 return false;
             } 
             return true;
@@ -92,12 +92,12 @@ class Socket
             addr.sin_addr.s_addr= inet_addr(ip.c_str());
             if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &addr, sizeof(addr)) == -1)
             {
-                LOG(ERROR) << "server socket bind failed!";
+                LOG_ERROR << "server socket bind failed!";
             };
             int bind_flag = ::bind(fd,(sockaddr *)(&addr),sizeof(sockaddr));
             if(bind_flag == -1) 
             {
-                LOG(ERROR) << "socket bind fail!";
+                LOG_ERROR << "socket bind fail!";
                 return false;
             }
             return true;
@@ -113,7 +113,7 @@ class Socket
             int connect_flag = ::connect(fd,(sockaddr *)(&addr),sizeof(sockaddr));
             if(connect_flag == -1)
             {
-                LOG(ERROR) << "connect fail!";
+                LOG_ERROR << "connect fail!";
                 return false;
             }
             return true;
@@ -124,13 +124,17 @@ class Socket
             if(fd == -1) return false;
             if(::listen(fd,MAX_LISTEN_NUM) == -1)
             {
-                LOG(ERROR) << "listen error!";
+                LOG_ERROR << "listen error!";
                 return false;
             }
             return true;
         }
-        
         int accept()
+        {
+            if(nonblock) return nonblock_accept();
+            else return block_accept();
+        }
+        int nonblock_accept()
         {
             if(fd==-1) return false;
             struct sockaddr_in addr;
@@ -139,7 +143,31 @@ class Socket
             int client_fd = ::accept(fd,(sockaddr *)(&addr),&addr_len);
             if(client_fd == -1)
             {
-                LOG(ERROR) << "accept fail!";
+                if(errno == EAGAIN || errno == EWOULDBLOCK)
+                {
+                    return 0;
+                }
+                else
+                {
+                    LOG_ERROR << "accept fail!";
+                    return -1;
+                }
+            }
+            char* client_ip = inet_ntoa(addr.sin_addr);
+            int client_port = ntohs(addr.sin_port);
+            printf("connect from %s:%d\n",client_ip,client_port);        
+            return client_fd;
+        }
+        int block_accept()
+        {
+            if(fd==-1) return false;
+            struct sockaddr_in addr;
+            memset(&addr, 0, sizeof(addr));
+            socklen_t addr_len = sizeof(addr);
+            int client_fd = ::accept(fd,(sockaddr *)(&addr),&addr_len);
+            if(client_fd == -1)
+            {
+                LOG_ERROR << "accept fail!";
                 return -1;
             }
             char* client_ip = inet_ntoa(addr.sin_addr);
@@ -163,7 +191,7 @@ class Socket
             int write_size = ::write(fd, msg.c_str(), msg.size());
             if(write_size != msg.size())
             {
-                LOG(ERROR) << "send fail! send num: " << write_size;
+                LOG_ERROR << "send fail! send num: " << write_size;
                 return false;
             }
             return true;
@@ -199,7 +227,7 @@ class Socket
                 else if(bytes_write == 0)
                 {
                     //EOF，客户端断开连接
-                    LOG(ERROR) << "EOF, client fd " << fd << " disconnected!";
+                    LOG_ERROR << "EOF, client fd " << fd << " disconnected!";
                     return false;
                 }
                 else
@@ -209,13 +237,15 @@ class Socket
                         if(index == msg.size())
                         {
                             // 表示读取完毕
-                            LOG(INFO) << "send over!";
+                            LOG_INFO << "send over!";
                             break;
                         }
                         else
                         {
                             continue;
+                            continue;
                         }
+                        continue;
                         continue;
                     }
                     else if(errno == EINTR)
@@ -224,7 +254,7 @@ class Socket
                     }
                     else
                     {
-                        LOG(ERROR) << "send process wrong!";
+                        LOG_ERROR << "send process wrong!";
                         return false;
                     }
                 }
@@ -250,7 +280,7 @@ class Socket
                 else if(bytes_read == 0)
                 {
                     //EOF，客户端断开连接
-                    LOG(ERROR) << "EOF, client fd " << fd << " disconnected!";
+                    LOG_ERROR << "EOF, client fd " << fd << " disconnected!";
                     return false;
                 }
                 else if(bytes_read == -1)
@@ -262,7 +292,10 @@ class Socket
                             // 表示读取完毕
                             // write(big_buffer);
                             break;
+                            break;
                         }
+                        continue;
+                        
                         continue;
                         
                     }
@@ -272,7 +305,7 @@ class Socket
                     }
                     else
                     {
-                        LOG(ERROR) << "recv process wrong!";
+                        LOG_ERROR << "recv process wrong!";
                         return false;
                     }
                 } 

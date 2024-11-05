@@ -28,7 +28,7 @@ void oneClient(int msgs, int wait)
         sendbuffer.append("I'm client! "+std::to_string(sockfd));
         client.write(sendbuffer);
         client.read(readbuffer);
-        LOG(INFO) << "recv: " << readbuffer;
+        LOG_INFO << "recv: " << readbuffer;
         count++;
     }   
 }

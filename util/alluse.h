@@ -2,6 +2,9 @@
 #define SERVER_UTIL_ALLUSE_H
 #include <glog/logging.h>
 
+#define LOG_INFO LOG(INFO)
+#define LOG_ERROR LOG(ERROR)
+#define LOG_FATAL LOG(FATAL)
 
 
 void glog_init(const char* argv_0)

@@ -81,7 +81,7 @@ class ThreadPool
                                 // if(!tasks_.pop_front(task)) continue;
                             }
                             task();
-                            LOG(INFO) << "one task done!";
+                            LOG_INFO << "one task done!";
                         }
                 }));
             }
