@@ -210,13 +210,13 @@ class Socket
                         {
                             // 表示读取完毕
                             LOG(INFO) << "send over!";
+                            break;
                         }
                         else
                         {
-                            // 表示读取完毕
-                            LOG(ERROR) << "send over! but not all";
+                            continue;
                         }
-                        break;
+                        continue;
                     }
                     else if(errno == EINTR)
                     {
@@ -261,10 +261,10 @@ class Socket
                         {
                             // 表示读取完毕
                             // write(big_buffer);
-                            ::write(fd,big_buffer.c_str(),big_buffer.size());
-                            LOG(INFO) << "message from client fd " << fd ;
+                            break;
                         }
-                        break;
+                        continue;
+                        
                     }
                     else if(errno == EINTR)
                     {

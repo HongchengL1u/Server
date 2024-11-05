@@ -81,7 +81,11 @@ class Epoll
         {
             LOG(INFO) << "process msg!";
             std::string msg;
-            if(connect_socket->read(msg)) LOG(INFO) << "recv msg: "<< msg;
+            if(connect_socket->read(msg))
+            {
+                LOG(INFO) << "recv msg: "<< msg;
+                connect_socket->write(msg);
+            } 
             else
             {
                 // 多线程要及时关闭，以免出现过多close_wait
@@ -126,7 +130,9 @@ class Epoll
             ThreadPool pool(10);
             while(1)
             {
+                
                 int event_nums = epoll_wait(event_fd,events,kMaxEventNums,-1);
+                LOG(INFO) << "Thread pool left: " << pool.size();
                 if(event_nums == -1)
                 {
                     LOG(ERROR) << "epoll wait fail!";
@@ -145,7 +151,6 @@ class Epoll
                         pool.addfunc(((Event*)(events[i].data.ptr))->get_func());
                         LOG(INFO) << "event process end! fd: " << ev_fd;
                     }
-                    
                 }
             }
             return true;

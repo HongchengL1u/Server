@@ -99,6 +99,11 @@ class ThreadPool
             }
 
         }
+        int size()
+        {
+            std::lock_guard<std::mutex> lock(m_);
+            return tasks_.size();
+        }
         void addfunc(std::function<void()>& func)
         {
             tasks_.push_back(func);
