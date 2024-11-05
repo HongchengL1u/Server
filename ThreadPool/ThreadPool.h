@@ -9,6 +9,7 @@
 #include <functional>
 #include <future>
 #include "util/alluse.h"
+#include "util/alluse.h"
 template <typename T>
 class ThreadSafeDeque // 不怎么好用
 {
@@ -79,6 +80,7 @@ class ThreadPool
                                 // if(!tasks_.pop_front(task)) continue;
                             }
                             task();
+                            LOG(INFO) << "one task done!";
                             LOG(INFO) << "one task done!";
                         }
                 }));
