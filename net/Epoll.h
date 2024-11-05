@@ -79,6 +79,33 @@ class Epoll
                 {
                     LOG_ERROR << "epoll create fail!";
                 }
+            while(1)
+            {
+                int connect_fd = listen_socket.accept();
+                if(connect_fd<=0) break;
+                LOG_INFO << "connect_fd: " << connect_fd;
+                std::shared_ptr<Socket> connect_socket_ptr = std::make_shared<Socket>();
+                connect_socket_ptr->client_init(connect_fd);
+                connect_socket_ptr->set_nonblock();
+                struct epoll_event new_ev;
+                Event msg_process_event;
+                auto func = [this, connect_socket_ptr]()
+                {
+                    // 传递智能指针，最好使用lambda函数
+                    // 传递智能指针时最好不使用引用，因为这样增加不了计数
+                    this->msg_callback(connect_socket_ptr);
+                };
+                msg_process_event.bind(connect_fd,func);
+                // ET模式时，事件就绪时，假设对事件没做处理，内核不会反复通知事件就绪
+                new_ev.events = EPOLLET | EPOLLIN;
+                // EPOLLOUT 缓冲区可读
+                map[connect_fd] = msg_process_event;
+                new_ev.data.ptr = &(map[connect_fd]);
+                // ev如果被挂载到epfd上，则其上的内容是会被保存的
+                if(epoll_ctl(event_fd,EPOLL_CTL_ADD,connect_fd,&new_ev)==-1)
+                {
+                    LOG_ERROR << "epoll create fail!";
+                }
             }
 
         }
