@@ -1,5 +1,7 @@
 #ifndef SERVER_THREADPOOL_THREADPOOL_H
 #define SERVER_THREADPOOL_THREADPOOL_H
+#ifndef SERVER_THREADPOOL_THREADPOOL_H
+#define SERVER_THREADPOOL_THREADPOOL_H
 #include <iostream>
 #include <thread>
 #include <mutex>
@@ -8,6 +10,7 @@
 #include <deque>
 #include <functional>
 #include <future>
+#include "util/alluse.h"
 #include "util/alluse.h"
 template <typename T>
 class ThreadSafeDeque // 不怎么好用
@@ -80,6 +83,7 @@ class ThreadPool
                             }
                             task();
                             LOG(INFO) << "one task done!";
+                            LOG(INFO) << "one task done!";
                         }
                 }));
             }
@@ -116,6 +120,9 @@ class ThreadPool
         }
 
 };
+
+
+#endif
 
 
 #endif
