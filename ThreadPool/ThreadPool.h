@@ -1,3 +1,5 @@
+#ifndef SERVER_THREADPOOL_THREADPOOL_H
+#define SERVER_THREADPOOL_THREADPOOL_H
 #include <iostream>
 #include <thread>
 #include <mutex>
@@ -6,8 +8,7 @@
 #include <queue>
 #include <functional>
 #include <future>
-using namespace std;
-
+#include "util/alluse.h"
 template <typename T>
 class ThreadSafeQueue
 {
@@ -64,14 +65,17 @@ class ThreadPool
                         while(true)
                         {
                             std::function<void()> task;
-                            std::unique_lock<std::mutex> lock(m_);
-                            cv_.wait(lock,[this](){return (stop_ || !tasks_.empty());});
-                            if(tasks_.empty())
                             {
-                                break;
+                                std::unique_lock<std::mutex> lock(m_);
+                                cv_.wait(lock,[this](){return (stop_ || !tasks_.empty());});
+                                if(tasks_.empty())
+                                {
+                                    break;
+                                }
+                                tasks_.pop(task);
                             }
-                            tasks_.pop(task);
                             task();
+                            LOG(INFO) << "one task done!";
                         }
                 }));
             }
@@ -89,6 +93,11 @@ class ThreadPool
             }
 
         }
+        void addfunc(std::function<void()>& func)
+        {
+            tasks_.push(func);
+            cv_.notify_one();
+        }
         template<typename F, typename ... Args>
         auto add(F&& f, Args&& ... args) -> std::future<decltype(f(args...))>
         {
@@ -103,3 +112,6 @@ class ThreadPool
         }
 
 };
+
+
+#endif
