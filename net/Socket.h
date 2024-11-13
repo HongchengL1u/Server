@@ -10,6 +10,7 @@ extern "C"
     #include <arpa/inet.h>
     #include <unistd.h>
     #include <fcntl.h>
+    #include <netinet/tcp.h>
 }
 
 #include "util/alluse.h"
@@ -42,6 +43,15 @@ class Socket
         {
             return fd;
         }
+        void set_nonnagle()
+        {
+            int yes = 1;
+            int result = setsockopt(fd,
+                                    IPPROTO_TCP,
+                                    TCP_NODELAY,
+                                    (void*)&yes, 
+                                    sizeof(int)); 
+        }
         void set_nonblock()
         {
             // https://blog.csdn.net/zxpoiu/article/details/115793012
@@ -55,7 +65,7 @@ class Socket
             fd = socket(AF_INET, SOCK_STREAM, 0);
             if(fd == -1)
             {
-                LOG_ERROR << "socket create fail!";
+                LOG_FATAL << "socket create fail!";
                 return false;
             } 
             return true;
@@ -64,7 +74,7 @@ class Socket
         {
             if(_fd == -1)
             {
-                LOG_ERROR << "Socket init fail!";
+                LOG_FATAL << "Socket init fail!";
                 return false;
             }
             type = TYPE::CLIENT;
@@ -77,7 +87,7 @@ class Socket
             fd = socket(AF_INET, SOCK_STREAM, 0);
             if(fd == -1)
             {
-                LOG_ERROR << "socket create fail!";
+                LOG_FATAL << "socket create fail!";
                 return false;
             } 
             return true;
@@ -92,12 +102,12 @@ class Socket
             addr.sin_addr.s_addr= inet_addr(ip.c_str());
             if(setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &addr, sizeof(addr)) == -1)
             {
-                LOG_ERROR << "server socket bind failed!";
+                LOG_FATAL << "server socket bind failed!";
             };
             int bind_flag = ::bind(fd,(sockaddr *)(&addr),sizeof(sockaddr));
             if(bind_flag == -1) 
             {
-                LOG_ERROR << "socket bind fail!";
+                LOG_FATAL << "socket bind fail!";
                 return false;
             }
             return true;
@@ -113,7 +123,7 @@ class Socket
             int connect_flag = ::connect(fd,(sockaddr *)(&addr),sizeof(sockaddr));
             if(connect_flag == -1)
             {
-                LOG_ERROR << "connect fail!";
+                LOG_FATAL << "connect fail!";
                 return false;
             }
             return true;
@@ -124,7 +134,7 @@ class Socket
             if(fd == -1) return false;
             if(::listen(fd,MAX_LISTEN_NUM) == -1)
             {
-                LOG_ERROR << "listen error!";
+                LOG_FATAL << "listen error!";
                 return false;
             }
             return true;
